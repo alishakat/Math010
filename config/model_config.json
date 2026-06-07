@@ -1,0 +1,21 @@
+{
+  "bootstrap_reps": 999,
+  "seed": 20260308,
+  "pre_periods": [-5, -4, -3, -2],
+  "post_periods": [0, 1, 2, 3],
+  "exclude_years": [2020],
+  "municipality_controls": [
+    "population",
+    "higher_education_share",
+    "high_income_household_share_750k_plus",
+    "unrestricted_revenues_per_capita"
+  ],
+  "teacher_controls": [
+    "teacher_pls_total_teachers_n",
+    "teacher_pls_full_time_share_pct",
+    "teacher_pls_share_with_teacher_education_pct",
+    "teacher_pls_share_with_other_educational_science_pct",
+    "teacher_pls_share_without_educational_science_pct",
+    "teacher_all_share_upper_secondary_or_less_pct"
+  ]
+}

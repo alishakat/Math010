@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.DS_Store
+
+outputs/tables/*.csv
+outputs/test_tables/
+outputs/smoke_test_tables/

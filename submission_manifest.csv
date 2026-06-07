@@ -1,0 +1,11 @@
+path,type,description
+README.md,documentation,Human-readable instructions for running the modelling package
+requirements.txt,environment,Minimal Python package requirements
+config/model_config.json,configuration,Model settings and control-variable lists
+code/run_master_thesis_models.py,program,Standalone modelling program that reads CSV inputs and writes CSV model tables
+data/final_school_year_panel.csv,input data,Clean school-year panel used for baseline ATT and event-study models
+data/final_school_year_panel_with_municipality_covariates.csv,input data,Clean school-year panel with municipality covariates merged
+data/final_school_year_panel_with_teacher_covariates.csv,input data,Clean school-year panel with municipality and teacher covariates merged
+data/municipality_covariates_merged.csv,input data,Source municipality-year covariate panel retained for documentation and audit
+data/teacher_covariates_official_county_year.csv,input data,Source county-year teacher covariate panel retained for documentation and audit
+outputs/tables/,output folder,Destination for CSV model-output tables
