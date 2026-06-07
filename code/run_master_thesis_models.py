@@ -157,57 +157,50 @@ def estimate_delta_att_weighted(
     treated_weights: pd.Series,
     control_weights: pd.Series,
 ) -> float:
-    data = pd.concat(
-        [
-            pd.DataFrame(
-                {
-                    "delta": treated_delta,
-                    "treated": 1,
-                    "baseline": treated_base,
-                    "weight": treated_weights,
-                }
-            ),
-            pd.DataFrame(
-                {
-                    "delta": control_delta,
-                    "treated": 0,
-                    "baseline": control_base,
-                    "weight": control_weights,
-                }
-            ),
-        ],
-        ignore_index=True,
+    """
+    Estimate a pupil-count-weighted cohort-year ATT.
+
+    The ATT is the weighted mean outcome change among treated schools minus
+    the weighted mean outcome change among not-yet-treated schools.
+    """
+    treated = pd.DataFrame(
+        {
+            "delta": treated_delta,
+            "baseline": treated_base,
+            "weight": treated_weights,
+        }
     ).dropna()
-    data = data.loc[data["weight"] > 0].copy()
 
-    if data.empty:
-        raise ValueError("No weighted observations are available.")
+    controls = pd.DataFrame(
+        {
+            "delta": control_delta,
+            "baseline": control_base,
+            "weight": control_weights,
+        }
+    ).dropna()
 
-    if data["treated"].nunique() < 2:
-        treated_mean = np.average(
-            data.loc[data["treated"] == 1, "delta"],
-            weights=data.loc[data["treated"] == 1, "weight"],
-        )
-        control_mean = np.average(
-            data.loc[data["treated"] == 0, "delta"],
-            weights=data.loc[data["treated"] == 0, "weight"],
-        )
-        return float(treated_mean - control_mean)
+    treated = treated.loc[treated["weight"] > 0].copy()
+    controls = controls.loc[controls["weight"] > 0].copy()
 
-    try:
-        x = sm.add_constant(data[["treated", "baseline"]], has_constant="add")
-        model = sm.WLS(data["delta"], x, weights=data["weight"]).fit()
-        return float(model.params["treated"])
-    except Exception:
-        treated_mean = np.average(
-            data.loc[data["treated"] == 1, "delta"],
-            weights=data.loc[data["treated"] == 1, "weight"],
+    if treated.empty:
+        raise ValueError("No weighted treated-school changes are available.")
+
+    if controls.empty:
+        raise ValueError(
+            "No weighted not-yet-treated-school changes are available."
         )
-        control_mean = np.average(
-            data.loc[data["treated"] == 0, "delta"],
-            weights=data.loc[data["treated"] == 0, "weight"],
-        )
-        return float(treated_mean - control_mean)
+
+    treated_mean = np.average(
+        treated["delta"],
+        weights=treated["weight"],
+    )
+
+    control_mean = np.average(
+        controls["delta"],
+        weights=controls["weight"],
+    )
+
+    return float(treated_mean - control_mean)
 
 
 def cohort_time_att(sample: pd.DataFrame, outcome_col: str, weight_col: str | None = None) -> pd.DataFrame:
