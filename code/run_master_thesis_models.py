@@ -116,23 +116,37 @@ def estimate_delta_att(
     treated_base: pd.Series,
     control_base: pd.Series,
 ) -> float:
-    data = pd.concat(
-        [
-            pd.DataFrame({"delta": treated_delta, "treated": 1, "baseline": treated_base}),
-            pd.DataFrame({"delta": control_delta, "treated": 0, "baseline": control_base}),
-        ],
-        ignore_index=True,
+    """
+    Estimate the cohort-year ATT as the difference between:
+
+    1. the mean outcome change among treated schools; and
+    2. the mean outcome change among not-yet-treated schools.
+
+    The treated_base and control_base arguments are retained so that the
+    function remains compatible with the existing calls. They are used only
+    to ensure that both the baseline-year and comparison-year outcomes exist.
+    """
+    treated = pd.DataFrame(
+        {
+            "delta": treated_delta,
+            "baseline": treated_base,
+        }
     ).dropna()
 
-    if data["treated"].nunique() < 2:
-        return float(treated_delta.mean() - control_delta.mean())
+    controls = pd.DataFrame(
+        {
+            "delta": control_delta,
+            "baseline": control_base,
+        }
+    ).dropna()
 
-    try:
-        x = sm.add_constant(data[["treated", "baseline"]], has_constant="add")
-        model = sm.OLS(data["delta"], x).fit()
-        return float(model.params["treated"])
-    except Exception:
-        return float(treated_delta.mean() - control_delta.mean())
+    if treated.empty:
+        raise ValueError("No complete treated-school changes are available.")
+
+    if controls.empty:
+        raise ValueError("No complete not-yet-treated-school changes are available.")
+
+    return float(treated["delta"].mean() - controls["delta"].mean())
 
 
 def estimate_delta_att_weighted(
