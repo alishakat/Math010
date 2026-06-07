@@ -877,7 +877,83 @@ def weighted_and_exclusion_sensitivity(
         )
 
     return pd.DataFrame(rows)
+    
+def validate_panel_structure(panel: pd.DataFrame) -> None:
+    required_columns = {
+        "school_id",
+        "year",
+        "first_treat_year",
+        "post",
+        "event_time",
+    }
 
+    missing_columns = required_columns.difference(panel.columns)
+
+    if missing_columns:
+        raise ValueError(
+            "Missing required columns: "
+            + ", ".join(sorted(missing_columns))
+        )
+
+    duplicates = panel.duplicated(
+        subset=["school_id", "year"],
+        keep=False,
+    )
+
+    if duplicates.any():
+        raise ValueError(
+            "Duplicate school-year observations were found."
+        )
+
+    treatment_year_counts = (
+        panel.groupby("school_id")["first_treat_year"]
+        .nunique(dropna=False)
+    )
+
+    inconsistent = treatment_year_counts.loc[
+        treatment_year_counts != 1
+    ]
+
+    if not inconsistent.empty:
+        raise ValueError(
+            "first_treat_year is not constant within schools: "
+            + ", ".join(inconsistent.index.astype(str))
+        )
+
+    expected_event_time = (
+        panel["year"] - panel["first_treat_year"]
+    ).astype(int)
+
+    if not panel["event_time"].equals(expected_event_time):
+        invalid = panel["event_time"] != expected_event_time
+
+        raise ValueError(
+            f"{int(invalid.sum())} observations have incorrect event_time."
+        )
+
+    expected_post = (
+        panel["year"] >= panel["first_treat_year"]
+    ).astype(int)
+
+    invalid_post = panel["post"] != expected_post
+
+    if invalid_post.any():
+        raise ValueError(
+            f"{int(invalid_post.sum())} observations have incorrect post."
+        )
+
+    ordered = panel.sort_values(["school_id", "year"])
+
+    reversals = (
+        ordered.groupby("school_id")["post"]
+        .diff()
+        .lt(0)
+    )
+
+    if reversals.any():
+        raise ValueError(
+            "Treatment is not absorbing for at least one school."
+        )
 
 def load_inputs(data_dir: Path) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     final_panel = pd.read_csv(data_dir / "final_school_year_panel.csv")
@@ -908,6 +984,10 @@ def main() -> None:
     teacher_controls = [str(value) for value in config["teacher_controls"]]
 
     final_panel, municipality_panel, teacher_panel = load_inputs(args.data_dir)
+
+    validate_panel_structure(final_panel)
+    validate_panel_structure(municipality_panel)
+    validate_panel_structure(teacher_panel)
 
     samples = {
         "Boys": (make_model_sample(final_panel, "boy_grade", "boy_count"), "boy_grade"),
