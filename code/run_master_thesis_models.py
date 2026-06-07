@@ -420,16 +420,42 @@ def estimate_twfe(sample: pd.DataFrame, outcome_col: str) -> dict[str, float]:
     }
 
 
-def build_control_sample(panel: pd.DataFrame, outcome_col: str, controls: list[str]) -> pd.DataFrame:
-    columns = ["school_id", "year", "first_treat_year", "post", "event_time", outcome_col] + controls
+def build_control_sample(
+    panel: pd.DataFrame,
+    outcome_col: str,
+    controls: list[str],
+) -> pd.DataFrame:
+    columns = [
+        "school_id",
+        "year",
+        "first_treat_year",
+        "post",
+        "event_time",
+        outcome_col,
+    ] + controls
+
     sample = panel[columns].copy()
-    sample = sample.loc[sample[outcome_col].notna()].dropna(subset=controls).copy()
+
+    # Controlled specifications use the 2015–2020 period.
+    sample = sample.loc[
+        sample["year"].between(2015, 2020)
+    ].copy()
+
+    sample = sample.loc[
+        sample[outcome_col].notna()
+    ].dropna(subset=controls).copy()
+
     sample["school_id"] = sample["school_id"].astype(str)
     sample["year"] = sample["year"].astype(int)
     sample["first_treat_year"] = sample["first_treat_year"].astype(int)
     sample["post"] = sample["post"].astype(int)
     sample["event_time"] = sample["event_time"].round().astype(int)
-    return sample.sort_values(["school_id", "year"]).reset_index(drop=True)
+
+    return (
+        sample
+        .sort_values(["school_id", "year"])
+        .reset_index(drop=True)
+    )
 
 
 def residualize_outcome(
