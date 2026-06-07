@@ -215,7 +215,8 @@ def cohort_time_att(sample: pd.DataFrame, outcome_col: str, weight_col: str | No
             if year == baseline_year:
                 continue
 
-            control_schools = sample.loc[sample["first_treat_year"] > year, "school_id"].unique()
+            #control_schools = sample.loc[sample["first_treat_year"] > year, "school_id"].unique()
+            control_schools = sample.loc[(sample["first_treat_year"] > year)& (sample["first_treat_year"] != cohort),"school_id",].unique()
             if len(control_schools) == 0:
                 continue
 
