@@ -432,19 +432,38 @@ def build_control_sample(panel: pd.DataFrame, outcome_col: str, controls: list[s
     return sample.sort_values(["school_id", "year"]).reset_index(drop=True)
 
 
-def residualize_outcome(sample: pd.DataFrame, outcome_col: str, controls: list[str]) -> tuple[pd.DataFrame, list[str]]:
+def residualize_outcome(
+    sample: pd.DataFrame,
+    outcome_col: str,
+    controls: list[str],
+) -> tuple[pd.DataFrame, list[str]]:
+    """
+    Residualise the outcome on the selected covariates,
+    school fixed effects, and year fixed effects.
+    """
     work = sample.copy()
-    used_controls = [col for col in controls if work[col].nunique(dropna=True) > 1]
 
-    if not used_controls:
-        work["_residual_outcome"] = work[outcome_col]
-        return work, used_controls
+    used_controls = [
+        col
+        for col in controls
+        if work[col].nunique(dropna=True) > 1
+    ]
 
-    x = sm.add_constant(work[used_controls], has_constant="add")
-    model = sm.OLS(work[outcome_col], x).fit()
+    formula_terms = used_controls + [
+        "C(school_id)",
+        "C(year)",
+    ]
+
+    formula = f"{outcome_col} ~ " + " + ".join(formula_terms)
+
+    model = smf.ols(
+        formula=formula,
+        data=work,
+    ).fit()
+
     work["_residual_outcome"] = model.resid
-    return work, used_controls
 
+    return work, used_controls
 
 def bootstrap_controlled_att(
     sample: pd.DataFrame,
